@@ -20,7 +20,7 @@ impl MerkleTree {
     }
 
     pub fn new_from_data<T: SHA256Hash>(data: &Vec<T>) -> MerkleTree {
-        let leafs = Vec::new();
+        let mut leafs = Vec::new();
         leafs.reserve(data.len());
 
         for val in data {
@@ -37,26 +37,26 @@ impl MerkleTree {
             let mut result = Vec::new();
 
             while index > 0 {
-                result.push(self.nodes[index].clone());
+                result.push(self.tree[index].clone());
                 index = index / 2 - 1;
             }
-            result.push(self.nodes[index].clone());
+            result.push(self.tree[index].clone());
             return result;
         }
         Vec::new()
     }
     // last element of vector on top in tree
-    pub fn proof(&self, data: &[u8; 32]) -> Vec<[u8; 32]> {
-        let hash = data.hash();
-        let index = self.nodes.iter().position(|&x| x == hash);
+    pub fn proof(&self, hash: &[u8; 32]) -> Vec<[u8; 32]> {
+        //TODO start from leaf position
+        let index = self.tree.iter().position(|&x| x == *hash);
 
         if let Some(mut index) = index {
             let mut result = Vec::new();
 
             while index > 0 {
-                let brother = MerkleTree::<T>::get_brother(index);
-                result.push(self.nodes[brother].clone());
-                index = MerkleTree::<T>::get_father(brother, index);
+                let brother = MerkleTree::get_brother(index);
+                result.push(self.tree[brother].clone());
+                index = MerkleTree::get_father(brother, index);
             }
             return result;
         }
@@ -64,7 +64,19 @@ impl MerkleTree {
         Vec::new()
     }
 
-    fn generate_merkle_tree(leafs: Vec<[u8; 32]>) -> MerkleTree {
+    fn root_value(&self) -> [u8; 32] {
+        if let Some(&value) = self.tree.last() {
+            return value.clone();
+        }
+        return [0; 32];
+    }
+
+    fn generate_merkle_tree(mut leafs: Vec<[u8; 32]>) -> MerkleTree {
+        // keep leafs count even
+        if leafs.len() % 2 != 0 {
+            let leaf = leafs.last().unwrap().clone();
+            leafs.push(leaf);
+        }
         let leafs_count = leafs.len();
         let nodes_count = 2 * leafs_count - 1;
         let mut nodes: Vec<[u8; 32]> = Vec::with_capacity(nodes_count);
