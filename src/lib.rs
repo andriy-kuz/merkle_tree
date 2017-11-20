@@ -12,8 +12,6 @@ pub struct MerkleTree<T: SHA256Hash> {
     data: Vec<T>,
 }
 
-//add function verify_proof
-
 impl<T: SHA256Hash> MerkleTree<T> {
     pub fn new(data: Vec<T>) -> MerkleTree<T> {
         MerkleTree::generate_merkle_tree(data)
@@ -99,6 +97,14 @@ fn get_hash(lh: &[u8; 32], rh: &[u8; 32]) -> [u8; 32] {
     hasher.update(lh);
     hasher.update(rh);
     hasher.finish()
+}
+
+fn verify_proof(root: &[u8; 32], data_hash: [u8; 32], proofs: &Vec<[u8; 32]>) -> bool {
+    let mut hash = data_hash;
+    for proof in proofs {
+        hash = get_hash(&hash, proof);
+    }
+    true
 }
 
 #[cfg(test)]
