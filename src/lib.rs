@@ -22,19 +22,12 @@ pub struct MerkleTree {
 }
 
 impl MerkleTree {
-    pub fn new(leafs: Vec<[u8; 32]>) -> MerkleTree {
+    pub fn from_vec(data: &Vec<T>) -> MerkleTree {
+        let mut leafs = Vec::with_capacity(data.len());
+        data.into_iter().map(|val| leafs.push(sha256_hash(val)));
         MerkleTree::generate_merkle_tree(leafs)
     }
 
-    pub fn new_from_data<T: SHA256Hash>(data: &Vec<T>) -> MerkleTree {
-        let mut leafs = Vec::new();
-        leafs.reserve(data.len());
-
-        for val in data {
-            leafs.push(val.hash());
-        }
-        MerkleTree::generate_merkle_tree(leafs)
-    }
 
     // last element - root value
     pub fn get_branch(&self, leaf: &[u8; 32]) -> Vec<[u8; 32]> {
@@ -71,9 +64,9 @@ impl MerkleTree {
         Vec::new()
     }
 
-    fn root_value(&self) -> [u8; 32] {
+    fn root_hash(&self) -> &[u8; 32] {
         if let Some(&value) = self.tree.last() {
-            return value.clone();
+            return &value;
         }
         return [0; 32];
     }
@@ -116,6 +109,12 @@ impl MerkleTree {
         let index = lh.max(rh);
         index / 2 - 1
     }
+}
+///TODO: double hash
+fn sha256_hash(data: Vec<u8>) -> [u8; 32] {
+    let mut hasher = sha::Sha256::new();
+    hasher.update(&data);
+    hasher.finish()
 }
 
 fn get_hash(lh: &[u8; 32], rh: &[u8; 32]) -> [u8; 32] {
