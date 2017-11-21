@@ -1,17 +1,24 @@
-extern crate hex;
+#![deny(missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts,
+        trivial_numeric_casts, unsafe_code, unstable_features, unused_import_braces,
+        unused_qualifications)]
+//! MerkleTree data structure implementation
 extern crate openssl;
 
 use openssl::sha;
-
+/// Hash trait
 pub trait SHA256Hash {
+    /// hash function
     fn hash(&self) -> [u8; 32];
 }
 
-// add push leaf function
-// to support this add is_odd flag
+/// MerkleTree data struc
+/// TODO: Maybe add push leaf function (needs is_odd flag)
+#[derive(Debug)]
 pub struct MerkleTree {
+    // vector of all nodes in tree
     tree: Vec<[u8; 32]>,
-    leafs_count: usize,
+    /// number of leaf nodes in the tree
+    count: usize,
 }
 
 impl MerkleTree {
@@ -30,8 +37,8 @@ impl MerkleTree {
     }
 
     // last element - root value
-    pub fn branch(&self, hash: &[u8; 32]) -> Vec<[u8; 32]> {
-        let index = self.tree.iter().position(|&x| x == *hash);
+    pub fn get_branch(&self, leaf: &[u8; 32]) -> Vec<[u8; 32]> {
+        let index = self.tree.iter().position(|&x| x == *leaf);
 
         if let Some(mut index) = index {
             let mut result = Vec::new();
@@ -46,9 +53,9 @@ impl MerkleTree {
         Vec::new()
     }
     // last element of vector on top in tree
-    pub fn proof(&self, hash: &[u8; 32]) -> Vec<[u8; 32]> {
+    pub fn get_proof(&self, leaf: &[u8; 32]) -> Vec<[u8; 32]> {
         //TODO start from leaf position
-        let index = self.tree.iter().position(|&x| x == *hash);
+        let index = self.tree.iter().position(|&x| x == *leaf);
 
         if let Some(mut index) = index {
             let mut result = Vec::new();
@@ -95,7 +102,7 @@ impl MerkleTree {
         }
         MerkleTree {
             tree: nodes,
-            leafs_count,
+            count: leafs_count,
         }
     }
 
