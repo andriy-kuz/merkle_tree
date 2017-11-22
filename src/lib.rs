@@ -1,30 +1,43 @@
+#![feature(fixed_size_array)]
+#![feature(associated_consts)]
 #![deny(missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts,
         trivial_numeric_casts, unsafe_code, unstable_features, unused_import_braces,
         unused_qualifications)]
 //! MerkleTree data structure implementation
+extern crate core;
 extern crate openssl;
 
 use openssl::sha;
-/// Hash trait
-pub trait SHA256Hash {
-    /// hash function
-    fn hash(&self) -> [u8; 32];
+use core::array;
+
+trait hash {
 }
 
+impl hash for openssl::sha::Sha256 {
+}
+
+impl hash for openssl::sha::Sha512 {
+}
+
+pub trait to_vec {
+    fn convert(&self) -> Vec<u8>;
+}
+
+type Node = Vec<u8>;
 /// MerkleTree data struc
 /// TODO: Maybe add push leaf function (needs is_odd flag)
-#[derive(Debug)]
 pub struct MerkleTree {
     // vector of all nodes in tree
-    tree: Vec<[u8; 32]>,
+    tree: Vec<Node>,
     /// number of leaf nodes in the tree
     count: usize,
 }
 
 impl MerkleTree {
-    pub fn from_vec(data: &Vec<T>) -> MerkleTree {
+    pub fn from_vec<T : to_vec, H : hash>(data: &Vec<T>) -> MerkleTree {
         let mut leafs = Vec::with_capacity(data.len());
-        data.into_iter().map(|val| leafs.push(sha256_hash(val)));
+        let hasher = H::new();
+        data.iter().map(|val| leafs.push(MerkleTree::get_hash(val.convert())));
         MerkleTree::generate_merkle_tree(leafs)
     }
 
@@ -109,12 +122,9 @@ impl MerkleTree {
         let index = lh.max(rh);
         index / 2 - 1
     }
-}
-///TODO: double hash
-fn sha256_hash(data: Vec<u8>) -> [u8; 32] {
-    let mut hasher = sha::Sha256::new();
-    hasher.update(&data);
-    hasher.finish()
+    fn get_hash(data: Vec<u8>) -> Vec<u8> {
+        Vec::new()
+    }
 }
 
 fn get_hash(lh: &[u8; 32], rh: &[u8; 32]) -> [u8; 32] {
