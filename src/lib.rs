@@ -4,40 +4,31 @@
         trivial_numeric_casts, unsafe_code, unstable_features, unused_import_braces,
         unused_qualifications)]
 //! MerkleTree data structure implementation
+mod crypto;
+
 extern crate core;
 extern crate openssl;
 
 use openssl::sha;
-use core::array;
 
-trait hash {
+pub trait RawData {
+    fn get_raw_data(&self) -> Vec<u8>;
 }
 
-impl hash for openssl::sha::Sha256 {
-}
-
-impl hash for openssl::sha::Sha512 {
-}
-
-pub trait to_vec {
-    fn convert(&self) -> Vec<u8>;
-}
-
-type Node = Vec<u8>;
+type Bytes = Vec<u8>;
 /// MerkleTree data struc
 /// TODO: Maybe add push leaf function (needs is_odd flag)
 pub struct MerkleTree {
     // vector of all nodes in tree
-    tree: Vec<Node>,
+    tree: Vec<Bytes>,
     /// number of leaf nodes in the tree
     count: usize,
 }
 
 impl MerkleTree {
-    pub fn from_vec<T : to_vec, H : hash>(data: &Vec<T>) -> MerkleTree {
+    pub fn from_vec<T: Into<Bytes>, H: crypto::HashFunction>(data: &Vec<T>) -> MerkleTree {
         let mut leafs = Vec::with_capacity(data.len());
-        let hasher = H::new();
-        data.iter().map(|val| leafs.push(MerkleTree::get_hash(val.convert())));
+        data.iter().map(|val| leafs.push(H::get_hash(val.into())));
         MerkleTree::generate_merkle_tree(leafs)
     }
 
