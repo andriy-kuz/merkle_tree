@@ -7,4 +7,4 @@ reorder_imports = true
 
 [dependencies]
 openssl = "0.9.20"
-hex = "0.2.0"
+bytevec = "0.2.0"

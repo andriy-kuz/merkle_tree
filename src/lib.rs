@@ -4,38 +4,39 @@
         trivial_numeric_casts, unsafe_code, unstable_features, unused_import_braces,
         unused_qualifications)]
 //! MerkleTree data structure implementation
-mod crypto;
-
-extern crate core;
+extern crate bytevec;
 extern crate openssl;
 
 use openssl::sha;
+use bytevec::ByteEncodable;
 
-pub trait RawData {
-    fn get_raw_data(&self) -> Vec<u8>;
-}
+mod crypto;
 
-type Bytes = Vec<u8>;
+type Node = Vec<u8>;
 /// MerkleTree data struc
 /// TODO: Maybe add push leaf function (needs is_odd flag)
 pub struct MerkleTree {
     // vector of all nodes in tree
-    tree: Vec<Bytes>,
+    tree: Vec<Node>,
     /// number of leaf nodes in the tree
     count: usize,
 }
 
 impl MerkleTree {
-    pub fn from_vec<T: Into<Bytes>, H: crypto::HashFunction>(data: &Vec<T>) -> MerkleTree {
+    pub fn from_vec<T: ByteEncodable, H: crypto::HashFunction>(data: &Vec<T>) -> MerkleTree {
         let mut leafs = Vec::with_capacity(data.len());
-        data.iter().map(|val| leafs.push(H::get_hash(val.into())));
-        MerkleTree::generate_merkle_tree(leafs)
+        data.iter().map(|val| {
+            let buf = val.encode::<u32>().unwrap();
+            leafs.push(H::get_hash(buf))
+        });
+        MerkleTree::generate_merkle_tree::<H>(leafs)
     }
 
 
     // last element - root value
-    pub fn get_branch(&self, leaf: &[u8; 32]) -> Vec<[u8; 32]> {
-        let index = self.tree.iter().position(|&x| x == *leaf);
+    pub fn get_branch(&self, leaf: &Node) -> Vec<Node> {
+        //TODO start search leaf from leaf[0] position
+        let index = self.tree.iter().position(|x| *x == *leaf);
 
         if let Some(mut index) = index {
             let mut result = Vec::new();
@@ -50,9 +51,9 @@ impl MerkleTree {
         Vec::new()
     }
     // last element of vector on top in tree
-    pub fn get_proof(&self, leaf: &[u8; 32]) -> Vec<[u8; 32]> {
-        //TODO start from leaf position
-        let index = self.tree.iter().position(|&x| x == *leaf);
+    pub fn get_proof(&self, leaf: &Node) -> Vec<Node> {
+        //TODO start search leaf from leaf[0] position
+        let index = self.tree.iter().position(|x| *x == *leaf);
 
         if let Some(mut index) = index {
             let mut result = Vec::new();
@@ -68,14 +69,11 @@ impl MerkleTree {
         Vec::new()
     }
 
-    fn root_hash(&self) -> &[u8; 32] {
-        if let Some(&value) = self.tree.last() {
-            return &value;
-        }
-        return [0; 32];
+    fn root_hash(&self) -> Option<&Node> {
+        return self.tree.last();
     }
 
-    fn generate_merkle_tree(mut leafs: Vec<[u8; 32]>) -> MerkleTree {
+    fn generate_merkle_tree<H: crypto::HashFunction>(mut leafs: Vec<Node>) -> MerkleTree {
         // keep leafs count even
         if leafs.len() % 2 != 0 {
             let leaf = leafs.last().unwrap().clone();
@@ -83,9 +81,9 @@ impl MerkleTree {
         }
         let leafs_count = leafs.len();
         let nodes_count = 2 * leafs_count - 1;
-        let mut nodes: Vec<[u8; 32]> = Vec::with_capacity(nodes_count);
+        let mut nodes: Vec<Node> = Vec::with_capacity(nodes_count);
         // in performance view
-        nodes.resize(nodes_count - leafs_count, [0; 32]);
+        nodes.resize(nodes_count - leafs_count, Vec::new());
         //add leafs hashes
         nodes.append(&mut leafs);
         //create tree
@@ -93,7 +91,7 @@ impl MerkleTree {
             let mut index = nodes.len() - 1;
             while index > 0 {
                 let parent = index / 2 - 1;
-                nodes[parent] = get_hash(&nodes[index], &nodes[index - 1]);
+                nodes[parent] = H::get_merge_hash(&nodes[index], &nodes[index - 1]);
                 index -= 2;
             }
         }
