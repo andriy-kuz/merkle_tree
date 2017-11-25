@@ -1,40 +1,43 @@
-#![feature(fixed_size_array)]
-#![feature(associated_consts)]
 #![deny(missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts,
         trivial_numeric_casts, unsafe_code, unstable_features, unused_import_braces,
         unused_qualifications)]
 //! MerkleTree data structure implementation
+pub mod crypto;
+use crypto::*;
+
 extern crate bytevec;
-extern crate openssl;
-
-use openssl::sha;
 use bytevec::ByteEncodable;
-
-mod crypto;
-
-type Node = Vec<u8>;
 /// MerkleTree data struc
 /// TODO: Maybe add push leaf function (needs is_odd flag)
+#[derive(Debug)]
 pub struct MerkleTree {
-    // vector of all nodes in tree
-    tree: Vec<Node>,
-    /// number of leaf nodes in the tree
+    // Binary tree represented by vector
+    tree: Vec<HashValue>,
+    /// Count of leaf nodes in the tree
     count: usize,
 }
 
 impl MerkleTree {
-    pub fn from_vec<T: ByteEncodable, H: crypto::HashFunction>(data: &Vec<T>) -> MerkleTree {
+    /// Construct new Merkle Tree from vector of data.
+    ///
+    /// Data type <T> must support ByteEncodable trait
+    /// Function generic specification <H> must implement crypto::HashFunction trait
+    /// Note: Present crypto::HashFunction trait implementationfor openssl::sha::* algorithms
+    ///
+    pub fn from_vec<T: ByteEncodable, H: HashFunction>(data: &Vec<T>) -> MerkleTree {
         let mut leafs = Vec::with_capacity(data.len());
-        data.iter().map(|val| {
+
+        for val in data {
             let buf = val.encode::<u32>().unwrap();
             leafs.push(H::get_hash(buf))
-        });
+        }
         MerkleTree::generate_merkle_tree::<H>(leafs)
     }
 
 
-    // last element - root value
-    pub fn get_branch(&self, leaf: &Node) -> Vec<Node> {
+    /// Return branch of hashes for leaf
+    /// Last HashValue in result vector will be tree root
+    pub fn get_branch(&self, leaf: &HashValue) -> Vec<HashValue> {
         //TODO start search leaf from leaf[0] position
         let index = self.tree.iter().position(|x| *x == *leaf);
 
@@ -50,8 +53,9 @@ impl MerkleTree {
         }
         Vec::new()
     }
-    // last element of vector on top in tree
-    pub fn get_proof(&self, leaf: &Node) -> Vec<Node> {
+    /// Return check vector of hashes for leaf
+    /// First HashValue of result - brother of input leaf
+    pub fn get_proof(&self, leaf: &HashValue) -> Vec<HashValue> {
         //TODO start search leaf from leaf[0] position
         let index = self.tree.iter().position(|x| *x == *leaf);
 
@@ -68,12 +72,12 @@ impl MerkleTree {
 
         Vec::new()
     }
-
-    fn root_hash(&self) -> Option<&Node> {
+    /// Return root hash value of merkle tree
+    pub fn root_hash(&self) -> Option<&HashValue> {
         return self.tree.last();
     }
 
-    fn generate_merkle_tree<H: crypto::HashFunction>(mut leafs: Vec<Node>) -> MerkleTree {
+    fn generate_merkle_tree<H: HashFunction>(mut leafs: Vec<HashValue>) -> MerkleTree {
         // keep leafs count even
         if leafs.len() % 2 != 0 {
             let leaf = leafs.last().unwrap().clone();
@@ -81,7 +85,7 @@ impl MerkleTree {
         }
         let leafs_count = leafs.len();
         let nodes_count = 2 * leafs_count - 1;
-        let mut nodes: Vec<Node> = Vec::with_capacity(nodes_count);
+        let mut nodes: Vec<HashValue> = Vec::with_capacity(nodes_count);
         // in performance view
         nodes.resize(nodes_count - leafs_count, Vec::new());
         //add leafs hashes
@@ -111,24 +115,18 @@ impl MerkleTree {
         let index = lh.max(rh);
         index / 2 - 1
     }
-    fn get_hash(data: Vec<u8>) -> Vec<u8> {
-        Vec::new()
-    }
 }
-
-fn get_hash(lh: &[u8; 32], rh: &[u8; 32]) -> [u8; 32] {
-    let mut hasher = sha::Sha256::new();
-    hasher.update(lh);
-    hasher.update(rh);
-    hasher.finish()
-}
-
-fn verify_proof(root: &[u8; 32], data_hash: [u8; 32], proofs: &Vec<[u8; 32]>) -> bool {
+/// Verify validity of data to given root and proofs
+pub fn verify_proof<H: HashFunction>(
+    root: &HashValue,
+    data_hash: HashValue,
+    proofs: &Vec<HashValue>,
+) -> bool {
     let mut hash = data_hash;
     for proof in proofs {
-        hash = get_hash(&hash, proof);
+        hash = H::get_merge_hash(&hash, proof);
     }
-    true
+    *root == hash
 }
 
 #[cfg(test)]
