@@ -8,7 +8,6 @@ use crypto::*;
 extern crate bytevec;
 use bytevec::ByteEncodable;
 /// MerkleTree data struc
-/// TODO: Maybe add push leaf function (needs is_odd flag)
 #[derive(Debug)]
 pub struct MerkleTree {
     // Binary tree represented by vector
@@ -38,8 +37,8 @@ impl MerkleTree {
     /// Return branch of hashes for leaf
     /// Last HashValue in result vector will be tree root
     pub fn get_branch(&self, leaf: &HashValue) -> Vec<HashValue> {
-        //TODO start search leaf from leaf[0] position
-        let index = self.tree.iter().position(|x| *x == *leaf);
+        let mut index = self.tree.iter().skip(self.tree.len() - self.count);
+        let index = index.position(|x| *x == *leaf);
 
         if let Some(mut index) = index {
             let mut result = Vec::new();
@@ -56,8 +55,8 @@ impl MerkleTree {
     /// Return check vector of hashes for leaf
     /// First HashValue of result - brother of input leaf
     pub fn get_proof(&self, leaf: &HashValue) -> Vec<HashValue> {
-        //TODO start search leaf from leaf[0] position
-        let index = self.tree.iter().position(|x| *x == *leaf);
+        let mut index = self.tree.iter().skip(self.tree.len() - self.count);
+        let index = index.position(|x| *x == *leaf);
 
         if let Some(mut index) = index {
             let mut result = Vec::new();
@@ -127,6 +126,17 @@ pub fn verify_proof<H: HashFunction>(
         hash = H::get_merge_hash(&hash, proof);
     }
     *root == hash
+}
+
+impl PartialEq for MerkleTree {
+    fn eq(&self, other: &MerkleTree) -> bool {
+        if let Some(ref lh_root) = self.root_hash() {
+            if let Some(ref rh_root) = other.root_hash() {
+                return *lh_root == *rh_root;
+            }
+        }
+        false
+    }
 }
 
 #[cfg(test)]
