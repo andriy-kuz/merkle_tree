@@ -12,8 +12,8 @@ use bytevec::ByteEncodable;
 pub struct Node {
     #[allow(missing_docs)]
     pub _hash: HashValue,
-    /// Type of node: True - left node, False - right node
-    pub _type: bool,
+    /// Indicate left node is true, right is false.
+    pub _left: bool,
 }
 /// MerkleTree data structure
 #[derive(Debug)]
@@ -104,14 +104,14 @@ impl MerkleTree {
             nodes_count - leafs_count,
             Node {
                 _hash: Vec::new(),
-                _type: true,
+                _left: true,
             },
         );
-        // add nodes with leafs hashes and default root type
+        // add nodes with leafs hashes and default left value
         for leaf in leafs.into_iter() {
             nodes.push(Node {
                 _hash: leaf,
-                _type: true,
+                _left: true,
             });
         }
         //create tree
@@ -121,12 +121,12 @@ impl MerkleTree {
                 let parent = index / 2 - 1;
                 nodes[parent] = Node {
                     _hash: H::get_merge_hash(&nodes[index - 1]._hash, &nodes[index]._hash),
-                    _type: false, //default type for parent node
+                    _left: true, //default left value for parent node
                 };
                 //right node
-                nodes[index]._type = false;
+                nodes[index]._left = false;
                 //left node
-                nodes[index - 1]._type = true;
+                nodes[index - 1]._left = true;
                 index -= 2;
             }
         }
@@ -155,7 +155,7 @@ pub fn verify_proof<H: HashFunction>(
 ) -> bool {
     let mut hash = data_hash.clone();
     for proof in proofs {
-        if proof._type {
+        if proof._left {
             hash = H::get_merge_hash(&proof._hash, &hash);
         } else {
             hash = H::get_merge_hash(&hash, &proof._hash);
@@ -244,7 +244,7 @@ mod tests {
             String::from("data13"),
             String::from("data14"),
             String::from("data15"),
-            String::from("data16"),
+            String::from("data16c"),
         ];
         let tree = MerkleTree::from_vec::<sha::Sha256, _>(&data);
         let mut leafs = Vec::with_capacity(data.len());
@@ -257,7 +257,6 @@ mod tests {
         if let Some(root) = tree.root() {
             for leaf in &leafs {
                 let proof = tree.get_proof(leaf);
-                println!("******{}", proof.len());
                 assert_eq!(verify_proof::<sha::Sha256>(&root._hash, leaf, &proof), true);
             }
         }
