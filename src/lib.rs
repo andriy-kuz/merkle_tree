@@ -12,7 +12,7 @@ use bytevec::ByteEncodable;
 pub struct Node {
     #[allow(missing_docs)]
     pub _hash: HashValue,
-    /// Indicate left node is true, right is false.
+    /// Indicates left node if true, right if false.
     pub _left: bool,
 }
 /// MerkleTree data structure
