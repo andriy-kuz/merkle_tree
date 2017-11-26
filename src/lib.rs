@@ -7,13 +7,21 @@ use crypto::*;
 
 extern crate bytevec;
 use bytevec::ByteEncodable;
-/// MerkleTree data struc
+/// Tree node holds hash and node type
+#[derive(Debug, Clone)]
+pub struct Node {
+    #[allow(missing_docs)]
+    pub _hash: HashValue,
+    /// Type of node: True - left node, False - right node
+    pub _type: bool,
+}
+/// MerkleTree data structure
 #[derive(Debug)]
 pub struct MerkleTree {
     // Binary tree represented by vector
-    tree: Vec<HashValue>,
+    _tree: Vec<Node>,
     /// Count of leaf nodes in the tree
-    count: usize,
+    _count: usize,
 }
 
 impl MerkleTree {
@@ -36,38 +44,38 @@ impl MerkleTree {
 
     /// Return leaf's branch of hashes
     /// Last HashValue in result vector will be tree root
-    pub fn get_branch(&self, leaf: &HashValue) -> Vec<HashValue> {
-        let mut index = self.tree.iter().skip(self.tree.len() - self.count);
-        let index = index.position(|x| *x == *leaf);
+    pub fn get_branch(&self, leaf: &HashValue) -> Vec<Node> {
+        let mut index = self._tree.iter().skip(self._tree.len() - self._count);
+        let index = index.position(|x| x._hash == *leaf);
 
         if let Some(mut index) = index {
             // align index
-            index += self.tree.len() - self.count;
+            index += self._tree.len() - self._count;
             let mut result = Vec::new();
 
             while index > 0 {
-                result.push(self.tree[index].clone());
+                result.push(self._tree[index].clone());
                 index = index / 2 - 1;
             }
-            result.push(self.tree[index].clone());
+            result.push(self._tree[index].clone());
             return result;
         }
         Vec::new()
     }
     /// Return leaf's check vector of hashes
     /// First HashValue of result vector - bottom of tree (leaf's brother)
-    pub fn get_proof(&self, leaf: &HashValue) -> Vec<HashValue> {
-        let mut index = self.tree.iter().skip(self.tree.len() - self.count);
-        let index = index.position(|x| *x == *leaf);
+    pub fn get_proof(&self, leaf: &HashValue) -> Vec<Node> {
+        let mut index = self._tree.iter().skip(self._tree.len() - self._count);
+        let index = index.position(|x| x._hash == *leaf);
 
         if let Some(mut index) = index {
             // align index
-            index += self.tree.len() - self.count;
+            index += self._tree.len() - self._count;
             let mut result = Vec::new();
 
             while index > 0 {
                 let brother = MerkleTree::get_brother(index);
-                result.push(self.tree[brother].clone());
+                result.push(self._tree[brother].clone());
                 index = MerkleTree::get_father(brother, index);
             }
             return result;
@@ -75,38 +83,56 @@ impl MerkleTree {
         Vec::new()
     }
     /// Return merkle's tree root hash value
-    pub fn root(&self) -> Option<&HashValue> {
-        return self.tree.first();
+    pub fn root(&self) -> Option<&Node> {
+        return self._tree.first();
     }
     /// Return elements count tree
     pub fn len(&self) -> usize {
-        self.tree.len()
+        self._tree.len()
     }
     /// Return leafs count in tree
     pub fn leafs(&self) -> usize {
-        self.count
+        self._count
     }
 
-    fn generate_merkle_tree<H: HashFunction>(mut leafs: Vec<HashValue>) -> MerkleTree {
+    fn generate_merkle_tree<H: HashFunction>(leafs: Vec<HashValue>) -> MerkleTree {
         let leafs_count = leafs.len();
         let nodes_count = 2 * leafs_count - 1;
-        let mut nodes: Vec<HashValue> = Vec::with_capacity(nodes_count);
+        let mut nodes: Vec<Node> = Vec::with_capacity(nodes_count);
         // in performance view
-        nodes.resize(nodes_count - leafs_count, Vec::new());
-        //add leafs hashes
-        nodes.append(&mut leafs);
+        nodes.resize(
+            nodes_count - leafs_count,
+            Node {
+                _hash: Vec::new(),
+                _type: true,
+            },
+        );
+        // add nodes with leafs hashes and default root type
+        for leaf in leafs.into_iter() {
+            nodes.push(Node {
+                _hash: leaf,
+                _type: true,
+            });
+        }
         //create tree
         {
             let mut index = nodes.len() - 1;
             while index > 0 {
                 let parent = index / 2 - 1;
-                nodes[parent] = H::get_merge_hash(&nodes[index], &nodes[index - 1]);
+                nodes[parent] = Node {
+                    _hash: H::get_merge_hash(&nodes[index - 1]._hash, &nodes[index]._hash),
+                    _type: false, //default type for parent node
+                };
+                //right node
+                nodes[index]._type = false;
+                //left node
+                nodes[index - 1]._type = true;
                 index -= 2;
             }
         }
         MerkleTree {
-            tree: nodes,
-            count: leafs_count,
+            _tree: nodes,
+            _count: leafs_count,
         }
     }
 
@@ -124,12 +150,16 @@ impl MerkleTree {
 /// Verify validity of data to given root and proofs
 pub fn verify_proof<H: HashFunction>(
     root: &HashValue,
-    data_hash: HashValue,
-    proofs: &Vec<HashValue>,
+    data_hash: &HashValue,
+    proofs: &Vec<Node>,
 ) -> bool {
-    let mut hash = data_hash;
+    let mut hash = data_hash.clone();
     for proof in proofs {
-        hash = H::get_merge_hash(&hash, proof);
+        if proof._type {
+            hash = H::get_merge_hash(&proof._hash, &hash);
+        } else {
+            hash = H::get_merge_hash(&hash, &proof._hash);
+        }
     }
     *root == hash
 }
@@ -138,7 +168,7 @@ impl PartialEq for MerkleTree {
     fn eq(&self, other: &MerkleTree) -> bool {
         if let Some(ref lh_root) = self.root() {
             if let Some(ref rh_root) = other.root() {
-                return *lh_root == *rh_root;
+                return lh_root._hash == rh_root._hash;
             }
         }
         false
@@ -202,19 +232,34 @@ mod tests {
             String::from("data1"),
             String::from("data2"),
             String::from("data3"),
+            String::from("data4"),
+            String::from("data5"),
+            String::from("data6"),
+            String::from("data7"),
+            String::from("data8"),
+            String::from("data9"),
+            String::from("data10"),
+            String::from("data11"),
+            String::from("data12"),
+            String::from("data13"),
+            String::from("data14"),
+            String::from("data15"),
+            String::from("data16"),
         ];
         let tree = MerkleTree::from_vec::<sha::Sha256, _>(&data);
-        println!("{:?}", tree);
-        // Calc data[0] hash
-        let mut leaf = <sha::Sha256 as HashFunction>::get_hash(data[0].encode::<u32>().unwrap());
-        let proof = tree.get_proof(&leaf);
-        assert_eq!(proof.len(), 1);
+        let mut leafs = Vec::with_capacity(data.len());
+        for val in &data {
+            leafs.push(<sha::Sha256 as HashFunction>::get_hash(
+                val.encode::<u32>().unwrap(),
+            ));
+        }
 
         if let Some(root) = tree.root() {
-            for proof in &proof {
-                leaf = <sha::Sha256 as HashFunction>::get_merge_hash(&leaf, proof);
+            for leaf in &leafs {
+                let proof = tree.get_proof(leaf);
+                println!("******{}", proof.len());
+                assert_eq!(verify_proof::<sha::Sha256>(&root._hash, leaf, &proof), true);
             }
-            assert_eq!(leaf, *root);
         }
     }
 }
