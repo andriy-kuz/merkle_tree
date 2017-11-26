@@ -1,4 +1,4 @@
-//! Cryptographic util modul
+//! Cryptographic util module
 //! Crypto module use openssl library
 //! and has implementation of HashFunction traits for
 //! openssl sha algorithms: SHA1, SHA224, SHA256, SHA384, SHA512
@@ -8,11 +8,11 @@ pub use self::openssl::sha;
 /// Hash value alias
 pub type HashValue = Vec<u8>;
 
-/// Hash function trait
+/// Hash functions trait
 pub trait HashFunction {
-    /// Return hash value of input data
+    /// Return hash value of input
     fn get_hash(Vec<u8>) -> HashValue;
-    /// Return hash value of concatenated input data
+    /// Return hash value of concatenated inputs
     fn get_merge_hash(&HashValue, &HashValue) -> HashValue;
 }
 //TODO: investigate how remove get_merge_hash code duplication

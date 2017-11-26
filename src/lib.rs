@@ -1,13 +1,13 @@
 #![deny(missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts,
         trivial_numeric_casts, unsafe_code, unstable_features, unused_import_braces,
         unused_qualifications)]
-//! MerkleTree data structure implementation
+//! MerkleTree implementation
 pub mod crypto;
 use crypto::*;
 
 extern crate bytevec;
 use bytevec::ByteEncodable;
-/// Tree node holds hash and node type
+/// Tree node
 #[derive(Debug, Clone)]
 pub struct Node {
     #[allow(missing_docs)]
@@ -20,16 +20,16 @@ pub struct Node {
 pub struct MerkleTree {
     // Binary tree represented by vector
     _tree: Vec<Node>,
-    /// Count of leaf nodes in the tree
+    /// Count of leaf nodes
     _count: usize,
 }
 
 impl MerkleTree {
     /// Construct new Merkle Tree from vector of data.
     ///
-    /// Data type <T> must support ByteEncodable trait
-    /// Function generic specification <H> must implement crypto::HashFunction trait
-    /// Note: Present crypto::HashFunction trait implementationfor openssl::sha::* algorithms
+    /// Data type <T> must implement ByteEncodable trait
+    /// Generic parameter <H> must implement crypto::HashFunction trait
+    /// Note: In crypto::* available implementation for openssl::sha::* algorithms
     ///
     pub fn from_vec<H: HashFunction, T: ByteEncodable>(data: &Vec<T>) -> MerkleTree {
         let mut leafs = Vec::with_capacity(data.len());
@@ -43,7 +43,7 @@ impl MerkleTree {
 
 
     /// Return leaf's branch of hashes
-    /// Last HashValue in result vector will be tree root
+    /// Last HashValue in result vector - tree's root
     pub fn get_branch(&self, leaf: &HashValue) -> Vec<Node> {
         let mut index = self._tree.iter().skip(self._tree.len() - self._count);
         let index = index.position(|x| x._hash == *leaf);
@@ -62,7 +62,7 @@ impl MerkleTree {
         }
         Vec::new()
     }
-    /// Return leaf's check vector of hashes
+    /// Return leaf's proof vector
     /// First HashValue of result vector - bottom of tree (leaf's brother)
     pub fn get_proof(&self, leaf: &HashValue) -> Vec<Node> {
         let mut index = self._tree.iter().skip(self._tree.len() - self._count);
@@ -82,15 +82,15 @@ impl MerkleTree {
         }
         Vec::new()
     }
-    /// Return merkle's tree root hash value
+    /// Return merkle's tree root
     pub fn root(&self) -> Option<&Node> {
         return self._tree.first();
     }
-    /// Return elements count tree
+    /// Return elements count
     pub fn len(&self) -> usize {
         self._tree.len()
     }
-    /// Return leafs count in tree
+    /// Return leafs count
     pub fn leafs(&self) -> usize {
         self._count
     }
@@ -99,7 +99,7 @@ impl MerkleTree {
         let leafs_count = leafs.len();
         let nodes_count = 2 * leafs_count - 1;
         let mut nodes: Vec<Node> = Vec::with_capacity(nodes_count);
-        // in performance view
+
         nodes.resize(
             nodes_count - leafs_count,
             Node {
