@@ -38,9 +38,12 @@ impl MerkleTree {
             let buf = val.encode::<u32>().unwrap();
             leafs.push(H::get_hash(buf))
         }
+        if leafs.len() % 2 != 0 {
+            let leaf = leafs.last().unwrap().clone();
+            leafs.push(leaf);
+        }
         MerkleTree::generate_merkle_tree::<H>(leafs)
     }
-
 
     /// Return leaf's branch of hashes
     /// Last HashValue in result vector - tree's root
@@ -187,17 +190,6 @@ mod tests {
                 String::from("data3"),
             ];
             let tree = MerkleTree::from_vec::<sha::Sha256, _>(&data);
-            assert_eq!(tree.len(), 5);
-            assert_eq!(tree.leafs(), 3);
-        }
-        {
-            let data = vec![
-                String::from("data1"),
-                String::from("data2"),
-                String::from("data3"),
-                String::from("data4"),
-            ];
-            let tree = MerkleTree::from_vec::<sha::Sha256, _>(&data);
             assert_eq!(tree.len(), 7);
             assert_eq!(tree.leafs(), 4);
         }
@@ -209,25 +201,15 @@ mod tests {
                 String::from("data4"),
                 String::from("data5"),
                 String::from("data6"),
-                String::from("data7"),
-                String::from("data8"),
-                String::from("data9"),
-                String::from("data10"),
-                String::from("data11"),
-                String::from("data12"),
-                String::from("data13"),
-                String::from("data14"),
-                String::from("data15"),
-                String::from("data16"),
             ];
             let tree = MerkleTree::from_vec::<sha::Sha256, _>(&data);
-            assert_eq!(tree.len(), 31);
-            assert_eq!(tree.leafs(), 16);
+            assert_eq!(tree.len(), 11);
+            assert_eq!(tree.leafs(), 6);
         }
     }
 
     #[test]
-    fn merkle_tree_crypto_test() {
+    fn merkle_tree_verify_test() {
         let data = vec![
             String::from("data1"),
             String::from("data2"),
@@ -244,10 +226,12 @@ mod tests {
             String::from("data13"),
             String::from("data14"),
             String::from("data15"),
-            String::from("data16c"),
         ];
+        // SHA-256 MerkleTree
+        {
         let tree = MerkleTree::from_vec::<sha::Sha256, _>(&data);
         let mut leafs = Vec::with_capacity(data.len());
+        // get hashes of data
         for val in &data {
             leafs.push(<sha::Sha256 as HashFunction>::get_hash(
                 val.encode::<u32>().unwrap(),
@@ -255,10 +239,31 @@ mod tests {
         }
 
         if let Some(root) = tree.root() {
+            //get proofs for leafs and validate them
             for leaf in &leafs {
                 let proof = tree.get_proof(leaf);
                 assert_eq!(verify_proof::<sha::Sha256>(&root._hash, leaf, &proof), true);
             }
+        }
+        }
+        // SHA-512 MerkleTree
+        {
+        let tree = MerkleTree::from_vec::<sha::Sha512, _>(&data);
+        let mut leafs = Vec::with_capacity(data.len());
+        // get hashes of data
+        for val in &data {
+            leafs.push(<sha::Sha512 as HashFunction>::get_hash(
+                val.encode::<u32>().unwrap(),
+            ));
+        }
+
+        if let Some(root) = tree.root() {
+            //get proofs for leafs and validate them
+            for leaf in &leafs {
+                let proof = tree.get_proof(leaf);
+                assert_eq!(verify_proof::<sha::Sha512>(&root._hash, leaf, &proof), true);
+            }
+        }
         }
     }
 }

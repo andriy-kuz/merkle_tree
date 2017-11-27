@@ -15,17 +15,17 @@ pub trait HashFunction {
     /// Return hash value of concatenated inputs
     fn get_merge_hash(&HashValue, &HashValue) -> HashValue;
 }
-//TODO: investigate how remove get_merge_hash code duplication
+
 impl HashFunction for sha::Sha1 {
     fn get_hash(mut data: Vec<u8>) -> HashValue {
         data = sha::sha1(&data).to_vec();
         sha::sha1(&data).to_vec()
     }
     fn get_merge_hash(lh: &HashValue, rh: &HashValue) -> HashValue {
-        let mut data = lh.clone();
-        data.append(&mut rh.clone());
-        data = sha::sha1(&data).to_vec();
-        sha::sha1(&data).to_vec()
+        let mut data = Vec::with_capacity(lh.len() + rh.len());
+        data.extend(lh);
+        data.extend(rh);
+        <sha::Sha1 as HashFunction>::get_hash(data.clone())
     }
 }
 
@@ -35,10 +35,10 @@ impl HashFunction for sha::Sha224 {
         sha::sha224(&data).to_vec()
     }
     fn get_merge_hash(lh: &HashValue, rh: &HashValue) -> HashValue {
-        let mut data = lh.clone();
-        data.append(&mut rh.clone());
-        data = sha::sha224(&data).to_vec();
-        sha::sha224(&data).to_vec()
+        let mut data = Vec::with_capacity(lh.len() + rh.len());
+        data.extend(lh);
+        data.extend(rh);
+        <sha::Sha224 as HashFunction>::get_hash(data.clone())
     }
 }
 
@@ -48,10 +48,10 @@ impl HashFunction for sha::Sha256 {
         sha::sha256(&data).to_vec()
     }
     fn get_merge_hash(lh: &HashValue, rh: &HashValue) -> HashValue {
-        let mut data = lh.clone();
-        data.append(&mut rh.clone());
-        data = sha::sha256(&data).to_vec();
-        sha::sha256(&data).to_vec()
+        let mut data = Vec::with_capacity(lh.len() + rh.len());
+        data.extend(lh);
+        data.extend(rh);
+        <sha::Sha256 as HashFunction>::get_hash(data.clone())
     }
 }
 
@@ -61,10 +61,10 @@ impl HashFunction for sha::Sha384 {
         sha::sha384(&data).to_vec()
     }
     fn get_merge_hash(lh: &HashValue, rh: &HashValue) -> HashValue {
-        let mut data = lh.clone();
-        data.append(&mut rh.clone());
-        data = sha::sha384(&data).to_vec();
-        sha::sha384(&data).to_vec()
+        let mut data = Vec::with_capacity(lh.len() + rh.len());
+        data.extend(lh);
+        data.extend(rh);
+        <sha::Sha384 as HashFunction>::get_hash(data.clone())
     }
 }
 
@@ -74,9 +74,9 @@ impl HashFunction for sha::Sha512 {
         sha::sha512(&data).to_vec()
     }
     fn get_merge_hash(lh: &HashValue, rh: &HashValue) -> HashValue {
-        let mut data = lh.clone();
-        data.append(&mut rh.clone());
-        data = sha::sha512(&data).to_vec();
-        sha::sha512(&data).to_vec()
+        let mut data = Vec::with_capacity(lh.len() + rh.len());
+        data.extend(lh);
+        data.extend(rh);
+        <sha::Sha512 as HashFunction>::get_hash(data.clone())
     }
 }
