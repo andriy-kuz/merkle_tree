@@ -38,6 +38,7 @@ impl MerkleTree {
             let buf = val.encode::<u32>().unwrap();
             leafs.push(H::get_hash(buf))
         }
+
         if leafs.len() % 2 != 0 {
             let leaf = leafs.last().unwrap().clone();
             leafs.push(leaf);
@@ -120,6 +121,7 @@ impl MerkleTree {
         //create tree
         {
             let mut index = nodes.len() - 1;
+
             while index > 0 {
                 let parent = index / 2 - 1;
                 nodes[parent] = Node {
@@ -158,6 +160,7 @@ pub fn verify_proof<H: HashFunction>(
 ) -> bool {
     let mut hash = data_hash.clone();
     for proof in proofs {
+
         if proof._left {
             hash = H::get_merge_hash(&proof._hash, &hash);
         } else {
@@ -169,7 +172,9 @@ pub fn verify_proof<H: HashFunction>(
 
 impl PartialEq for MerkleTree {
     fn eq(&self, other: &MerkleTree) -> bool {
+
         if let Some(ref lh_root) = self.root() {
+
             if let Some(ref rh_root) = other.root() {
                 return lh_root._hash == rh_root._hash;
             }
@@ -229,41 +234,41 @@ mod tests {
         ];
         // SHA-256 MerkleTree
         {
-        let tree = MerkleTree::from_vec::<sha::Sha256, _>(&data);
-        let mut leafs = Vec::with_capacity(data.len());
-        // get hashes of data
-        for val in &data {
-            leafs.push(<sha::Sha256 as HashFunction>::get_hash(
-                val.encode::<u32>().unwrap(),
-            ));
-        }
-
-        if let Some(root) = tree.root() {
-            //get proofs for leafs and validate them
-            for leaf in &leafs {
-                let proof = tree.get_proof(leaf);
-                assert_eq!(verify_proof::<sha::Sha256>(&root._hash, leaf, &proof), true);
+            let tree = MerkleTree::from_vec::<sha::Sha256, _>(&data);
+            let mut leafs = Vec::with_capacity(data.len());
+            // get hashes of data
+            for val in &data {
+                leafs.push(<sha::Sha256 as HashFunction>::get_hash(
+                    val.encode::<u32>().unwrap(),
+                ));
             }
-        }
+
+            if let Some(root) = tree.root() {
+                //get proofs for leafs and validate them
+                for leaf in &leafs {
+                    let proof = tree.get_proof(leaf);
+                    assert_eq!(verify_proof::<sha::Sha256>(&root._hash, leaf, &proof), true);
+                }
+            }
         }
         // SHA-512 MerkleTree
         {
-        let tree = MerkleTree::from_vec::<sha::Sha512, _>(&data);
-        let mut leafs = Vec::with_capacity(data.len());
-        // get hashes of data
-        for val in &data {
-            leafs.push(<sha::Sha512 as HashFunction>::get_hash(
-                val.encode::<u32>().unwrap(),
-            ));
-        }
+            let tree = MerkleTree::from_vec::<sha::Sha512, _>(&data);
+            let mut leafs = Vec::with_capacity(data.len());
+            // get hashes of data
+            for val in &data {
+                leafs.push(<sha::Sha512 as HashFunction>::get_hash(
+                    val.encode::<u32>().unwrap(),
+                ));
+            }
 
         if let Some(root) = tree.root() {
-            //get proofs for leafs and validate them
-            for leaf in &leafs {
-                let proof = tree.get_proof(leaf);
-                assert_eq!(verify_proof::<sha::Sha512>(&root._hash, leaf, &proof), true);
+                //get proofs for leafs and validate them
+                for leaf in &leafs {
+                    let proof = tree.get_proof(leaf);
+                    assert_eq!(verify_proof::<sha::Sha512>(&root._hash, leaf, &proof), true);
+                }
             }
-        }
         }
     }
 }
