@@ -3,7 +3,7 @@
 Merkle Tree data structure in Rust.
 ## Interface details
 Inspired by "Mastering Bitcoin: merkle tree": implementation does not
-own data and does not has reference to it.
+own data and does not have reference to it.
 MerkleTree::from_vec builds Merkle tree. Function accept reference to data of
 any type which implements ByteEncodable trait - converting to Vec<u8> dump. Also
 has generic parameter for hash algorithm type wich implement HashFunction trait.
