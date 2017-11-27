@@ -24,15 +24,16 @@ Other MerkleTree functions described in source code documentation.
 
 ## Implementation details
 MerkleTree represent binary tree like vector of hashes.
-First lement of vector - root of the tree. On my mind this is simple
-anf fast representation of binary tree for MerkleTree. Because MerkleTree does
+First element of vector - root of the tree. On my mind this is simple
+and fast representation of binary tree for MerkleTree data structure. Because MerkleTree does
 not need self balancing (this is not sorted binary search tree) and API does not
 have add_leaf functionality(referenced to Mastering Bitcoin : MerkleTree used
-for creating fingerprint (merkle root) of data and its verification),
-which will be slove in this variant of implementation (neads to recalculate whole tree).
+for creating fingerprint (merkle root) of data and its verification - add_leaf useless),
+which will be slove in this variant of implementation (neads to recalculate whole tree,
+or go in a way - Node have pointer to parent and childs).
 
 Also there could be another desing for MerkleTree, more data oriented:
-it will hold also data (not only hashes), implements iterating thow data elements or/and hashe tree
+it will hold also data (not only hashes), implements iterating thow data elements or/and hashes of tree
 and add, remove and access data elements by index, hash and so one. I decided to design
 it closer for it cryptographic and verifying functionality.
 
