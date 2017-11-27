@@ -30,7 +30,8 @@ not need self balancing (this is not sorted binary search tree) and API does not
 have add_leaf functionality(referenced to Mastering Bitcoin : MerkleTree used
 for creating fingerprint (merkle root) of data and its verification - add_leaf useless),
 which will be slove in this variant of implementation (neads to recalculate whole tree,
-or go in a way - Node have pointer to parent and childs).
+or go in a way - Node have pointer to parent and childs). Drawback -
+this algorithm builds not complete merkle tree.
 
 Also there could be another desing for MerkleTree, more data oriented:
 it will hold also data (not only hashes), implements iterating thow data elements or/and hashes of tree
