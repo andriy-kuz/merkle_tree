@@ -7,18 +7,30 @@ use crypto::*;
 
 extern crate bytevec;
 use bytevec::ByteEncodable;
+
+/// Type of node.
+/// Left and Right type - important in proof verifying
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum NodeType {
+    /// Root node
+    Root,
+    /// Left child node
+    Left,
+    /// Right child node
+    Right,
+}
 /// Tree node
 #[derive(Debug, Clone)]
 pub struct Node {
-    #[allow(missing_docs)]
+    /// Node hash value (vector of bytes)
     pub _hash: HashValue,
-    /// Indicates left node if true, right if false.
-    pub _left: bool,
+    /// Indicates node type
+    pub _type: NodeType,
 }
 /// MerkleTree data structure
 #[derive(Debug)]
 pub struct MerkleTree {
-    // Binary tree represented by vector
+    /// Binary tree represented by vector
     _tree: Vec<Node>,
     /// Count of leaf nodes
     _count: usize,
@@ -36,7 +48,7 @@ impl MerkleTree {
 
         for val in data {
             let buf = val.encode::<u32>().unwrap();
-            leafs.push(H::get_hash(buf))
+            leafs.push(H::get_hash(&buf))
         }
 
         if leafs.len() % 2 != 0 {
@@ -108,14 +120,14 @@ impl MerkleTree {
             nodes_count - leafs_count,
             Node {
                 _hash: Vec::new(),
-                _left: true,
+                _type: NodeType::Root,
             },
         );
         // add nodes with leafs hashes and default left value
         for leaf in leafs.into_iter() {
             nodes.push(Node {
                 _hash: leaf,
-                _left: true,
+                _type: NodeType::Root,
             });
         }
         //create tree
@@ -126,12 +138,12 @@ impl MerkleTree {
                 let parent = index / 2 - 1;
                 nodes[parent] = Node {
                     _hash: H::get_merge_hash(&nodes[index - 1]._hash, &nodes[index]._hash),
-                    _left: true, //default left value for parent node
+                    _type: NodeType::Root, //default left value for parent node
                 };
                 //right node
-                nodes[index]._left = false;
+                nodes[index]._type = NodeType::Right;
                 //left node
-                nodes[index - 1]._left = true;
+                nodes[index - 1]._type = NodeType::Left;
                 index -= 2;
             }
         }
@@ -160,8 +172,7 @@ pub fn verify_proof<H: HashFunction>(
 ) -> bool {
     let mut hash = data_hash.clone();
     for proof in proofs {
-
-        if proof._left {
+        if proof._type == NodeType::Left {
             hash = H::get_merge_hash(&proof._hash, &hash);
         } else {
             hash = H::get_merge_hash(&hash, &proof._hash);
@@ -172,9 +183,7 @@ pub fn verify_proof<H: HashFunction>(
 
 impl PartialEq for MerkleTree {
     fn eq(&self, other: &MerkleTree) -> bool {
-
         if let Some(ref lh_root) = self.root() {
-
             if let Some(ref rh_root) = other.root() {
                 return lh_root._hash == rh_root._hash;
             }
@@ -238,9 +247,8 @@ mod tests {
             let mut leafs = Vec::with_capacity(data.len());
             // get hashes of data
             for val in &data {
-                leafs.push(<sha::Sha256 as HashFunction>::get_hash(
-                    val.encode::<u32>().unwrap(),
-                ));
+                let data = val.encode::<u32>().unwrap();
+                leafs.push(<sha::Sha256 as HashFunction>::get_hash(&data));
             }
 
             if let Some(root) = tree.root() {
@@ -257,12 +265,11 @@ mod tests {
             let mut leafs = Vec::with_capacity(data.len());
             // get hashes of data
             for val in &data {
-                leafs.push(<sha::Sha512 as HashFunction>::get_hash(
-                    val.encode::<u32>().unwrap(),
-                ));
+                let data = val.encode::<u32>().unwrap();
+                leafs.push(<sha::Sha512 as HashFunction>::get_hash(&data));
             }
 
-        if let Some(root) = tree.root() {
+            if let Some(root) = tree.root() {
                 //get proofs for leafs and validate them
                 for leaf in &leafs {
                     let proof = tree.get_proof(leaf);
