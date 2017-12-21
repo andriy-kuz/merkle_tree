@@ -9,7 +9,8 @@ extern crate bytevec;
 use bytevec::ByteEncodable;
 
 /// Type of node.
-/// Left and Right type - important in proof verifying
+/// Left and Right type - important in proof verifying,
+/// indicates order for hash calculation
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum NodeType {
     /// Root node
@@ -123,7 +124,7 @@ impl MerkleTree {
                 _type: NodeType::Root,
             },
         );
-        // add nodes with leafs hashes and default left value
+        // add nodes with leafs hashes with default root type
         for leaf in leafs.into_iter() {
             nodes.push(Node {
                 _hash: leaf,
